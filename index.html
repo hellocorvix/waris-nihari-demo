@@ -40,9 +40,7 @@
 
   /* ---------- scroll track + pinned stage ---------- */
   #track{height:700vh;position:relative}
-  #stage{
-    position:sticky;top:0;height:100vh;height:100svh;
-    overflow:hidden;background:var(--bg);
+  \g<1>background:#0C0A09 url('sheets/frame-hero.jpg') center/cover no-repeat;
   }
   #film{
     position:absolute;inset:0;width:100%;height:100%;display:block;
@@ -151,42 +149,6 @@
     text-transform:uppercase;color:var(--muted);padding-left:.44em;
   }
 
-  /* ---------- preloader ---------- */
-  #preloader{
-    position:fixed;inset:0;z-index:100;background:var(--bg);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    transition:opacity .8s ease;padding:0 8vw;text-align:center;
-  }
-  #preloader.done{opacity:0;pointer-events:none}
-  #preloader .brand{
-    font-family:var(--serif);font-weight:700;text-transform:uppercase;
-    letter-spacing:.38em;padding-left:.38em;
-    font-size:clamp(1.6rem,7vw,2.6rem);color:var(--text);
-  }
-  #preloader .sub{
-    margin-top:.8rem;font-size:.62rem;letter-spacing:.46em;padding-left:.46em;
-    text-transform:uppercase;color:var(--gold-pale);
-  }
-  #preloader .pct{
-    font-family:var(--serif);font-weight:500;
-    font-size:clamp(3.4rem,16vw,5.5rem);line-height:1;
-    color:var(--gold-bright);margin-top:2.6rem;font-variant-numeric:tabular-nums;
-  }
-  #loadbar{
-    width:min(320px,72vw);height:2px;margin-top:1.4rem;
-    background:rgba(250,250,249,.14);overflow:hidden;border-radius:2px;
-  }
-  #loadfill{
-    height:100%;width:0%;
-    background:linear-gradient(90deg,var(--gold),var(--gold-bright),var(--gold-pale));
-    transition:width .35s ease;
-  }
-  #loadmsg{
-    margin-top:1.1rem;font-size:.68rem;letter-spacing:.22em;
-    text-transform:uppercase;color:var(--muted);min-height:1em;
-  }
-  #loadmsg.err{color:#F08A80;letter-spacing:.06em;text-transform:none;font-size:.82rem;line-height:1.6;max-width:30rem}
-
   /* ---------- essentials (after the film) ---------- */
   #essentials{
     background:var(--bg);position:relative;
@@ -287,15 +249,6 @@
 <body>
 
 <div id="progress"></div>
-
-<!-- ============ PRELOADER ============ -->
-<div id="preloader" role="status" aria-live="polite">
-  <div class="brand">Waris Nihari</div>
-  <div class="sub">Nihari House — Urdu Bazar, Lahore</div>
-  <div class="pct" id="pct">0%</div>
-  <div id="loadbar"><div id="loadfill"></div></div>
-  <div id="loadmsg">Loading the journey…</div>
-</div>
 
 <!-- ============ SCROLL FILM (700vh track, sticky stage) ============ -->
 <main id="track">
@@ -463,7 +416,7 @@
   'use strict';
 
   /* ================= config ================= */
-  var FRAMES   = 200;            // 25s x 8fps, indices 0..199
+  var FRAMES   = 196;            // 24.5s x 8fps, indices 0..195
   var PER_SHEET= 20;             // frames per sprite sheet
   var COLS     = 4, ROWS = 5;
   var FW       = 854, FH = 480;  // native frame size inside a sheet
@@ -473,21 +426,10 @@
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var preloader = document.getElementById('preloader');
-  var pctEl     = document.getElementById('pct');
-  var fillEl    = document.getElementById('loadfill');
-  var msgEl     = document.getElementById('loadmsg');
-
-  function setProgress(loaded){
-    var p = Math.round(loaded / SHEETS * 100);
-    pctEl.textContent = p + '%';
-    fillEl.style.width = p + '%';
-  }
 
   /* ================= reduced motion: no pin, no film ================= */
   if (reduceMotion) {
     document.body.classList.add('reduced');
-    preloader.style.display = 'none';
     document.getElementById('progress').style.display = 'none';
     return;
   }
@@ -512,35 +454,36 @@
     });
   }
 
-  /* ================= preload the 10 sheets ================= */
+  /* ================= stream the sheets in, in order =================
+     Nothing waits on the sheets: the stage, poster frame and hero copy
+     are on screen from the first paint. Sheets load one after another
+     in the background; the film starts as soon as the first 2 are in,
+     and until the rest arrive the draw loop clamps to the highest
+     fully-loaded frame, so scrolling ahead simply holds that frame.
+     A failed sheet is retried once, then skipped - the film proceeds
+     with whatever loaded. */
   var images  = new Array(SHEETS);
-  var loaded  = 0;
-  var failed  = false;
+  var settled = 0;        // sheets finished, loaded or given up on
+  var prefix  = 0;        // unbroken run of loaded sheets from sheet 1
+  var gap     = false;    // a sheet was given up on: the prefix freezes
 
-  function onSheetError(n){
-    if (failed) return;
-    failed = true;
-    msgEl.className = 'err';
-    msgEl.textContent = 'Could not load sheets/sheet-' + (n < 10 ? '0' + n : '' + n) +
-      '.webp — the film cannot start. Check the sheets/ folder and reload the page.';
-    pctEl.textContent = 'Error';
+  function loadSheet(n, attempt){
+    var img = new Image();
+    img.onload = function(){
+      images[n - 1] = img;
+      settled++;
+      if (!gap) prefix = n;
+      if (n < SHEETS) loadSheet(n + 1, 1);
+    };
+    img.onerror = function(){
+      if (attempt < 2) { loadSheet(n, attempt + 1); return; }
+      settled++;
+      gap = true;
+      if (n < SHEETS) loadSheet(n + 1, 1);
+    };
+    img.src = sheetSrc(n) + (attempt > 1 ? '?retry=1' : '');
   }
-
-  var ready = new Promise(function(resolve){
-    for (var n = 1; n <= SHEETS; n++) {
-      (function(n){
-        var img = new Image();
-        img.onload = function(){
-          images[n - 1] = img;
-          loaded++;
-          setProgress(loaded);
-          if (loaded === SHEETS) resolve();
-        };
-        img.onerror = function(){ onSheetError(n); };
-        img.src = sheetSrc(n);
-      })(n);
-    }
-  });
+  loadSheet(1, 1);
 
   /* ================= canvas stage ================= */
   var canvas = document.getElementById('film');
@@ -550,10 +493,10 @@
   var hint   = document.getElementById('scrollhint');
 
   var chapters = [
-    { el: document.getElementById('ch-hero'),    fadeIn:[0,0],     holdUntil:25,  fadeOut:[25,35],   final:false },
-    { el: document.getElementById('ch-dining'),  fadeIn:[53,65],   holdUntil:88,  fadeOut:[88,100],  final:false },
-    { el: document.getElementById('ch-kitchen'), fadeIn:[110,122], holdUntil:148, fadeOut:[148,160], final:false },
-    { el: document.getElementById('ch-final'),   fadeIn:[167,178], holdUntil:199, fadeOut:null,      final:true  }
+    { el: document.getElementById('ch-hero'), fadeIn:[0,0],  holdUntil:44, fadeOut:[44,56], final:false },
+    { el: document.getElementById('ch-kitchen'), fadeIn:[62,74],  holdUntil:96, fadeOut:[96,108], final:false },
+    { el: document.getElementById('ch-dining'), fadeIn:[114,124], holdUntil:132, fadeOut:[132,142], final:false },
+    { el: document.getElementById('ch-final'), fadeIn:[150,162], holdUntil:195, fadeOut:null, final:true }
   ];
   chapters.forEach(function(c){
     c.minY = c.final ? 26 : 18;
@@ -629,29 +572,25 @@
     cur += (target - cur) * LERP;
     if (Math.abs(target - cur) < 0.005) cur = target;
 
-    if (loaded === SHEETS) drawFrame(cur);
+    var maxF = Math.min(FRAMES - 1, prefix * PER_SHEET - 1);
+    var shown = Math.min(cur, Math.max(0, maxF));
+    if (prefix >= 2 || settled === SHEETS) drawFrame(shown);
 
     chapters.forEach(function(c){
-      var s = chapterState(c, cur);
+      var s = chapterState(c, shown);
       c.el.style.opacity = s.opacity.toFixed(3);
       c.el.style.transform = 'translateY(' + s.y.toFixed(1) + 'px)';
       if (c.final) c.el.classList.toggle('live', s.opacity > 0.6);
     });
 
-    bar.style.transform = 'scaleX(' + p.toFixed(4) + ')';
-    hint.style.opacity = cur < 10 ? String(1 - cur / 10) : '0';
+    var bp = settled < SHEETS ? settled / SHEETS : p;
+    bar.style.transform = 'scaleX(' + bp.toFixed(4) + ')';
+    hint.style.opacity = shown < 10 ? String(1 - shown / 10) : '0';
 
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
 
-  /* ================= reveal when every sheet is in ================= */
-  ready.then(function(){
-    drawFrame(0);
-    /* hold one beat so the first frame is on screen before the fade */
-    setTimeout(function(){ preloader.classList.add('done'); }, 250);
-    setTimeout(function(){ preloader.style.display = 'none'; }, 1200);
-  });
 })();
 </script>
 </body>
