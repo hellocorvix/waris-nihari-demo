@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Waris Nihari — Urdu Bazar, Lahore</title>
+<meta name="description" content="Waris Nihari, Urdu Bazar Lahore — Lahore's legendary nihari house. Beef nihari, nalli & maghaz, chicken boti and seekh kebab. Demo website.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0C0A09;
+    --gold:#A16207;
+    --gold-bright:#CA8A04;
+    --gold-pale:#E7C878;
+    --text:#FAFAF9;
+    --muted:rgba(250,250,249,.62);
+    --serif:'Cormorant',Georgia,serif;
+    --sans:'Montserrat',system-ui,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:auto}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold);color:#fff}
+
+  /* ---------- gold progress hairline ---------- */
+  #progress{
+    position:fixed;top:0;left:0;height:2px;width:100%;
+    background:linear-gradient(90deg,var(--gold),var(--gold-bright),var(--gold-pale));
+    transform-origin:0 50%;transform:scaleX(0);
+    z-index:60;pointer-events:none;
+  }
+
+  /* ---------- scroll track + pinned stage ---------- */
+  #track{height:700vh;position:relative}
+  #stage{
+    position:sticky;top:0;height:100vh;height:100svh;
+    overflow:hidden;background:var(--bg);
+  }
+  #film{
+    position:absolute;inset:0;width:100%;height:100%;display:block;
+  }
+  /* readability shade, always above canvas */
+  .shade{
+    position:absolute;inset:0;pointer-events:none;z-index:2;
+    background:
+      linear-gradient(180deg,rgba(12,10,9,.55) 0%,rgba(12,10,9,0) 26%,rgba(12,10,9,0) 55%,rgba(12,10,9,.66) 100%);
+  }
+
+  /* ---------- chapter overlays ---------- */
+  .chapter{
+    position:absolute;inset:0;z-index:3;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:0 6vw;
+    opacity:0;pointer-events:none;
+    will-change:opacity,transform;
+  }
+  .chapter .kicker{
+    font-size:clamp(.62rem,2.4vw,.8rem);letter-spacing:.42em;text-transform:uppercase;
+    color:var(--gold-pale);font-weight:600;margin-bottom:1.1rem;
+  }
+  .chapter h1,.chapter h2{
+    font-family:var(--serif);font-weight:600;line-height:.98;
+    font-size:clamp(3.2rem,14vw,7.5rem);
+    letter-spacing:.04em;text-transform:uppercase;
+    text-shadow:0 6px 44px rgba(0,0,0,.65);
+  }
+  .chapter h1 .amp,.chapter h2 .amp{color:var(--gold-bright);font-style:italic}
+  .chapter .rule{
+    width:64px;height:1px;margin:1.4rem auto;
+    background:linear-gradient(90deg,transparent,var(--gold-bright),transparent);
+  }
+  .chapter .sub{
+    font-size:clamp(.85rem,3.4vw,1.05rem);line-height:1.65;color:var(--text);
+    font-weight:500;max-width:34rem;text-shadow:0 2px 18px rgba(0,0,0,.8);
+  }
+  .chapter .sub .dim{color:var(--muted)}
+  .reviews{
+    display:inline-flex;align-items:center;gap:.5rem;margin-top:1.2rem;
+    font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-pale);
+  }
+  .reviews .stars{color:var(--gold-bright);letter-spacing:.2em;font-size:.85rem}
+
+  /* scroll hint */
+  #scrollhint{
+    position:absolute;left:50%;bottom:5.5vh;transform:translateX(-50%);
+    z-index:4;display:flex;flex-direction:column;align-items:center;gap:.7rem;
+    pointer-events:none;opacity:1;
+  }
+  #scrollhint span{
+    font-size:.62rem;letter-spacing:.5em;text-transform:uppercase;color:var(--muted);
+    padding-left:.5em;
+  }
+  #scrollhint .line{
+    width:1px;height:52px;
+    background:linear-gradient(180deg,var(--gold-bright),transparent);
+    animation:drip 2.2s ease-in-out infinite;
+    transform-origin:top;
+  }
+  @keyframes drip{0%,100%{transform:scaleY(.45);opacity:.5}50%{transform:scaleY(1);opacity:1}}
+
+  /* final CTA */
+  .cta-row{
+    display:flex;gap:.9rem;flex-wrap:wrap;justify-content:center;
+    margin-top:2.2rem;pointer-events:none;
+  }
+  .chapter.live .cta-row,.chapter.live .more-link{pointer-events:auto}
+  .more-link{
+    margin-top:1.6rem;font-size:.7rem;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--gold-pale);text-decoration:none;pointer-events:none;
+    border-bottom:1px solid rgba(231,200,120,.4);padding-bottom:.35rem;
+  }
+  .more-link:hover{color:var(--text)}
+  .btn{
+    display:inline-flex;align-items:center;gap:.55rem;
+    font-family:var(--sans);font-weight:700;font-size:.86rem;
+    letter-spacing:.12em;text-transform:uppercase;text-decoration:none;
+    padding:1rem 1.7rem;border-radius:999px;
+    transition:transform .25s ease,box-shadow .25s ease,background .25s ease;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn-gold{
+    background:linear-gradient(135deg,var(--gold-bright),var(--gold));
+    color:#FFF9EC;box-shadow:0 10px 34px rgba(202,138,4,.35);
+  }
+  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(202,138,4,.45)}
+  .btn-ghost{
+    border:1px solid rgba(231,200,120,.55);color:var(--text);
+    background:rgba(12,10,9,.45);backdrop-filter:blur(6px);
+  }
+  .btn-ghost:hover{transform:translateY(-2px);background:rgba(12,10,9,.7)}
+  .btn svg{width:17px;height:17px;flex:none}
+
+  /* corner brand */
+  #brandmark{
+    position:absolute;top:1.3rem;left:0;right:0;z-index:5;text-align:center;pointer-events:none;
+  }
+  #brandmark .b{
+    font-family:var(--serif);font-weight:700;letter-spacing:.34em;
+    font-size:.95rem;text-transform:uppercase;padding-left:.34em;
+  }
+  #brandmark .t{
+    display:block;margin-top:.3rem;font-size:.56rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--muted);padding-left:.44em;
+  }
+
+  /* ---------- preloader ---------- */
+  #preloader{
+    position:fixed;inset:0;z-index:100;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:opacity .8s ease;padding:0 8vw;text-align:center;
+  }
+  #preloader.done{opacity:0;pointer-events:none}
+  #preloader .brand{
+    font-family:var(--serif);font-weight:700;text-transform:uppercase;
+    letter-spacing:.38em;padding-left:.38em;
+    font-size:clamp(1.6rem,7vw,2.6rem);color:var(--text);
+  }
+  #preloader .sub{
+    margin-top:.8rem;font-size:.62rem;letter-spacing:.46em;padding-left:.46em;
+    text-transform:uppercase;color:var(--gold-pale);
+  }
+  #preloader .pct{
+    font-family:var(--serif);font-weight:500;
+    font-size:clamp(3.4rem,16vw,5.5rem);line-height:1;
+    color:var(--gold-bright);margin-top:2.6rem;font-variant-numeric:tabular-nums;
+  }
+  #loadbar{
+    width:min(320px,72vw);height:2px;margin-top:1.4rem;
+    background:rgba(250,250,249,.14);overflow:hidden;border-radius:2px;
+  }
+  #loadfill{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--gold),var(--gold-bright),var(--gold-pale));
+    transition:width .35s ease;
+  }
+  #loadmsg{
+    margin-top:1.1rem;font-size:.68rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--muted);min-height:1em;
+  }
+  #loadmsg.err{color:#F08A80;letter-spacing:.06em;text-transform:none;font-size:.82rem;line-height:1.6;max-width:30rem}
+
+  /* ---------- essentials (after the film) ---------- */
+  #essentials{
+    background:var(--bg);position:relative;
+    padding:6.5rem 6vw 4.5rem;
+    border-top:1px solid rgba(231,200,120,.16);
+  }
+  .ess-wrap{max-width:1080px;margin:0 auto}
+  .ess-kicker{
+    font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;
+    color:var(--gold-pale);font-weight:600;
+  }
+  .ess-h{
+    font-family:var(--serif);font-weight:600;line-height:1;
+    font-size:clamp(2.4rem,8vw,4.2rem);text-transform:uppercase;margin-top:.9rem;
+  }
+  .ess-rule{
+    width:64px;height:1px;margin:1.4rem 0 0;
+    background:linear-gradient(90deg,var(--gold-bright),transparent);
+  }
+  .ess-block{margin-top:4.5rem}
+  .ess-block:first-child{margin-top:0}
+
+  .menu-list{margin-top:2.2rem}
+  .menu-row{
+    display:flex;justify-content:space-between;align-items:baseline;gap:1.5rem;
+    padding:1.15rem 0;border-bottom:1px solid rgba(250,250,249,.09);
+  }
+  .menu-row:first-child{padding-top:.4rem}
+  .menu-row .name{font-family:var(--serif);font-size:1.5rem;font-weight:600;line-height:1.1}
+  .menu-row .desc{
+    display:block;font-family:var(--sans);font-size:.82rem;font-weight:400;
+    color:var(--muted);margin-top:.3rem;line-height:1.55;max-width:32rem;
+  }
+  .menu-row .price{
+    font-family:var(--serif);color:var(--gold-pale);
+    font-size:1.3rem;white-space:nowrap;font-weight:600;
+  }
+  .menu-note{
+    margin-top:1.3rem;font-size:.72rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--muted);
+  }
+
+  .info-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:2.8rem;margin-top:2.2rem;
+  }
+  @media(max-width:760px){.info-grid{grid-template-columns:1fr}}
+  .info-card h3{
+    font-family:var(--serif);font-size:1.6rem;font-weight:600;margin-bottom:1rem;
+  }
+  .info-line{
+    display:flex;gap:.8rem;align-items:flex-start;
+    padding:.65rem 0;border-bottom:1px solid rgba(250,250,249,.07);
+    font-size:.92rem;line-height:1.6;color:var(--text);
+  }
+  .info-line:last-child{border-bottom:0}
+  .info-line .lab{
+    flex:none;width:5.6rem;font-size:.64rem;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--gold-pale);padding-top:.32rem;font-weight:600;
+  }
+  .info-line a{color:var(--text);text-decoration:none;border-bottom:1px solid rgba(231,200,120,.45)}
+  .info-line a:hover{color:var(--gold-pale)}
+  .info-card .cta-row{justify-content:flex-start;pointer-events:auto;margin-top:1.4rem}
+  .map-frame{
+    border:1px solid rgba(231,200,120,.28);border-radius:14px;overflow:hidden;
+    background:#141210;
+  }
+  .map-frame iframe{
+    width:100%;height:380px;border:0;display:block;
+    filter:grayscale(1) invert(.94) contrast(.92) brightness(.9);
+  }
+  .map-actions{margin-top:1.1rem;display:flex;gap:.9rem;flex-wrap:wrap}
+
+  footer{
+    border-top:1px solid rgba(250,250,249,.08);
+    padding:2.2rem 6vw;text-align:center;
+    font-size:.7rem;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);
+    line-height:2;
+  }
+  footer .fname{
+    font-family:var(--serif);font-size:1rem;letter-spacing:.34em;color:var(--text);
+  }
+
+  /* ---------- reduced motion fallback ---------- */
+  .static-hero{display:none}
+  body.reduced #track{display:none}
+  body.reduced .static-hero{
+    display:flex;min-height:100svh;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:6rem 6vw;position:relative;
+    background:#0C0A09 url('sheets/frame-hero.jpg') center/cover no-repeat;
+  }
+  body.reduced .static-hero::before{
+    content:'';position:absolute;inset:0;background:rgba(12,10,9,.62);
+  }
+  body.reduced .static-hero>*{position:relative}
+  body.reduced .static-hero .cta-row{pointer-events:auto}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ============ PRELOADER ============ -->
+<div id="preloader" role="status" aria-live="polite">
+  <div class="brand">Waris Nihari</div>
+  <div class="sub">Nihari House — Urdu Bazar, Lahore</div>
+  <div class="pct" id="pct">0%</div>
+  <div id="loadbar"><div id="loadfill"></div></div>
+  <div id="loadmsg">Loading the journey…</div>
+</div>
+
+<!-- ============ SCROLL FILM (700vh track, sticky stage) ============ -->
+<main id="track">
+  <div id="stage">
+    <canvas id="film"></canvas>
+    <div class="shade"></div>
+
+    <div id="brandmark">
+      <span class="b">Waris Nihari</span>
+      <span class="t">Nihari House · Lahore</span>
+    </div>
+
+    <section class="chapter" id="ch-hero">
+      <div class="kicker">Urdu Bazar · Anarkali</div>
+      <h1>Waris<br><span style="font-size:.52em;letter-spacing:.14em">Nihari House</span></h1>
+      <div class="rule"></div>
+      <p class="sub">Lahore's legendary nihari — slow-cooked all night, served from dawn.<br><span class="dim">Urdu Bazar, Lahore</span></p>
+      <div class="reviews"><span class="stars">★★★★★</span><span>7,800+ Google reviews</span></div>
+    </section>
+
+    <section class="chapter" id="ch-dining">
+      <div class="kicker">The Hall</div>
+      <h2>Step<br>Inside.</h2>
+      <div class="rule"></div>
+      <p class="sub">Old-city breakfast done right —<br><span class="dim">the queue forms before sunrise.</span></p>
+      
+    </section>
+
+    <section class="chapter" id="ch-kitchen">
+      <div class="kicker">The Deg</div>
+      <h2>Simmered<br>Overnight.</h2>
+      <div class="rule"></div>
+      <p class="sub">Beef shank slow-cooked for hours,<br><span class="dim">until the gravy turns to silk.</span></p>
+      
+    </section>
+
+    <section class="chapter" id="ch-final">
+      <div class="kicker">The Legend</div>
+      <h2>Served Hot.</h2>
+      <div class="rule"></div>
+      <p class="sub">Nalli &amp; maghaz on request — when it's gone, it's gone.</p>
+      <div class="cta-row">
+        <a class="btn btn-gold" href="tel:+923217373222">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.4 11.4 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
+          Call to Order
+        </a>
+        <a class="btn btn-ghost" href="https://wa.me/923217373222" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.2L2 22l4.9-1.6A10 10 0 1 0 12.04 2zm5.8 14.1c-.2.7-1.4 1.3-2 1.3-.5.1-1.2.2-3.9-.8-3.3-1.3-5.4-4.7-5.6-4.9-.1-.2-1.3-1.8-1.3-3.4s.8-2.4 1.1-2.7c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.5 2.6 1.6.3.1.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.1 1.2z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+      <a class="more-link" href="#essentials">Full menu · Map · Directions ↓</a>
+    </section>
+
+
+    <div id="scrollhint"><span>Scroll</span><div class="line"></div></div>
+  </div>
+</main>
+
+<!-- ============ REDUCED-MOTION FALLBACK HERO ============ -->
+<div class="static-hero">
+  <div class="kicker" style="font-size:.7rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold-pale);font-weight:600;margin-bottom:1.1rem">Nihari House — Urdu Bazar, Lahore</div>
+  <h1 style="font-family:var(--serif);font-weight:600;font-size:clamp(2.8rem,12vw,5.5rem);line-height:1;text-transform:uppercase">Waris Nihari</h1>
+  <p style="margin-top:1.2rem;color:var(--text);line-height:1.65">Nihari House · Urdu Bazar, Lahore<br><span style="color:var(--muted)">4.3 · 7,800+ Google reviews.</span></p>
+  <div class="cta-row">
+        <a class="btn btn-gold" href="tel:+923217373222">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.4 11.4 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
+          Call to Order
+        </a>
+        <a class="btn btn-ghost" href="https://wa.me/923217373222" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.2L2 22l4.9-1.6A10 10 0 1 0 12.04 2zm5.8 14.1c-.2.7-1.4 1.3-2 1.3-.5.1-1.2.2-3.9-.8-3.3-1.3-5.4-4.7-5.6-4.9-.1-.2-1.3-1.8-1.3-3.4s.8-2.4 1.1-2.7c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.5 2.6 1.6.3.1.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.1 1.2z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+</div>
+
+<!-- ============ ESSENTIALS: MENU · MAP · INFO ============ -->
+<section id="essentials">
+  <div class="ess-wrap">
+
+    <div class="ess-block">
+      <div class="ess-kicker">From The Deg</div>
+      <h2 class="ess-h">The Menu</h2>
+      <div class="ess-rule"></div>
+      <div class="menu-list">
+        <div class="menu-row">
+          <div>
+            <span class="name">Beef Nihari</span>
+            <span class="desc">The legend itself — beef shank slow-cooked overnight in a rich, silky gravy.</span>
+          </div>
+        </div>
+        <div class="menu-row">
+          <div>
+            <span class="name">Nalli Nihari</span>
+            <span class="desc">Beef nihari crowned with bone marrow — the connoisseur's plate.</span>
+          </div>
+        </div>
+        <div class="menu-row">
+          <div>
+            <span class="name">Maghaz Nihari</span>
+            <span class="desc">With fried brain, the traditional way Lahoris love it.</span>
+          </div>
+        </div>
+        <div class="menu-row">
+          <div>
+            <span class="name">Chicken Boti</span>
+            <span class="desc">Charcoal-grilled chicken pieces, straight off the coals.</span>
+          </div>
+        </div>
+        <div class="menu-row">
+          <div>
+            <span class="name">Seekh Kebab</span>
+            <span class="desc">Hand-minced skewers from the same fire.</span>
+          </div>
+        </div>
+      </div>
+      <p class="menu-note">Dine-in · Takeaway · Also on foodpanda</p>
+    </div>
+
+    <div class="ess-block">
+      <div class="ess-kicker">Visit · Order</div>
+      <h2 class="ess-h">Find Us</h2>
+      <div class="ess-rule"></div>
+      <div class="info-grid">
+        <div class="info-card">
+          <h3>Waris Nihari</h3>
+          <div class="info-line"><span class="lab">Address</span><span>7 Abkari Rd, Urdu Bazar, Lahore 54000</span></div>
+          <div class="info-line"><span class="lab">Hours</span><span>Open daily — early morning to late night</span></div>
+          <div class="info-line"><span class="lab">Phone</span><a href="tel:+923217373222">+92 321 7373222</a></div>
+          <div class="info-line"><span class="lab">Reviews</span><span><span style="color:var(--gold-bright);letter-spacing:.15em">★★★★★</span>&nbsp; 4.3 · 7,800+ Google reviews</span></div>
+          <div class="cta-row">
+        <a class="btn btn-gold" href="tel:+923217373222">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.4 11.4 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
+          Call to Order
+        </a>
+        <a class="btn btn-ghost" href="https://wa.me/923217373222" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.4 15.2L2 22l4.9-1.6A10 10 0 1 0 12.04 2zm5.8 14.1c-.2.7-1.4 1.3-2 1.3-.5.1-1.2.2-3.9-.8-3.3-1.3-5.4-4.7-5.6-4.9-.1-.2-1.3-1.8-1.3-3.4s.8-2.4 1.1-2.7c.3-.3.6-.4.8-.4h.6c.2 0 .4 0 .6.5s.8 1.9.8 2c.1.1.1.3 0 .5l-.4.6-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.5 2.6 1.6.3.1.5.1.7-.1l.9-1c.2-.3.4-.2.7-.1l2 .9c.3.2.5.3.6.4 0 .1 0 .7-.1 1.2z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+        </div>
+        <div class="info-card">
+          <div class="map-frame">
+            <iframe title="Map — Waris Nihari" src="https://maps.google.com/maps?q=Waris+Nihari+Urdu+Bazar+Lahore&t=&z=15&ie=UTF8&iwloc=&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          </div>
+          <div class="map-actions">
+            <a class="btn btn-ghost" href="https://www.google.com/maps/dir/?api=1&destination=Waris+Nihari+Urdu+Bazar+Lahore" target="_blank" rel="noopener">Get Directions</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  <div class="fname">Waris Nihari</div>
+  Nihari House · Urdu Bazar, Lahore · +92 321 7373222<br>
+  Demo website — built by Corvix
+</footer>
+
+<script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  /* ================= config ================= */
+  var FRAMES   = 200;            // 25s x 8fps, indices 0..199
+  var PER_SHEET= 20;             // frames per sprite sheet
+  var COLS     = 4, ROWS = 5;
+  var FW       = 854, FH = 480;  // native frame size inside a sheet
+  var SHEETS   = 10;
+  var LERP     = 0.12;           // eased-chase smoothing factor
+  var sheetSrc = function(n){ return 'sheets/sheet-' + (n < 10 ? '0' + n : '' + n) + '.webp'; };
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var preloader = document.getElementById('preloader');
+  var pctEl     = document.getElementById('pct');
+  var fillEl    = document.getElementById('loadfill');
+  var msgEl     = document.getElementById('loadmsg');
+
+  function setProgress(loaded){
+    var p = Math.round(loaded / SHEETS * 100);
+    pctEl.textContent = p + '%';
+    fillEl.style.width = p + '%';
+  }
+
+  /* ================= reduced motion: no pin, no film ================= */
+  if (reduceMotion) {
+    document.body.classList.add('reduced');
+    preloader.style.display = 'none';
+    document.getElementById('progress').style.display = 'none';
+    return;
+  }
+
+  /* ================= smooth scroll (Lenis, guarded) ================= */
+  var lenis = null;
+  try {
+    if (window.Lenis) lenis = new window.Lenis({ lerp: 0.09, smoothWheel: true });
+  } catch (e) { lenis = null; }
+
+  /* in-page anchors: ride Lenis when present, native smooth scroll otherwise */
+  var anchorLinks = document.querySelectorAll('a[href^="#"]');
+  for (var a = 0; a < anchorLinks.length; a++) {
+    anchorLinks[a].addEventListener('click', function(ev){
+      var id = this.getAttribute('href');
+      if (id.length < 2) return;
+      var target = document.querySelector(id);
+      if (!target) return;
+      ev.preventDefault();
+      if (lenis) lenis.scrollTo(target, { offset: 0 });
+      else target.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  /* ================= preload the 10 sheets ================= */
+  var images  = new Array(SHEETS);
+  var loaded  = 0;
+  var failed  = false;
+
+  function onSheetError(n){
+    if (failed) return;
+    failed = true;
+    msgEl.className = 'err';
+    msgEl.textContent = 'Could not load sheets/sheet-' + (n < 10 ? '0' + n : '' + n) +
+      '.webp — the film cannot start. Check the sheets/ folder and reload the page.';
+    pctEl.textContent = 'Error';
+  }
+
+  var ready = new Promise(function(resolve){
+    for (var n = 1; n <= SHEETS; n++) {
+      (function(n){
+        var img = new Image();
+        img.onload = function(){
+          images[n - 1] = img;
+          loaded++;
+          setProgress(loaded);
+          if (loaded === SHEETS) resolve();
+        };
+        img.onerror = function(){ onSheetError(n); };
+        img.src = sheetSrc(n);
+      })(n);
+    }
+  });
+
+  /* ================= canvas stage ================= */
+  var canvas = document.getElementById('film');
+  var ctx    = canvas.getContext('2d');
+  var track  = document.getElementById('track');
+  var bar    = document.getElementById('progress');
+  var hint   = document.getElementById('scrollhint');
+
+  var chapters = [
+    { el: document.getElementById('ch-hero'),    fadeIn:[0,0],     holdUntil:25,  fadeOut:[25,35],   final:false },
+    { el: document.getElementById('ch-dining'),  fadeIn:[53,65],   holdUntil:88,  fadeOut:[88,100],  final:false },
+    { el: document.getElementById('ch-kitchen'), fadeIn:[110,122], holdUntil:148, fadeOut:[148,160], final:false },
+    { el: document.getElementById('ch-final'),   fadeIn:[167,178], holdUntil:199, fadeOut:null,      final:true  }
+  ];
+  chapters.forEach(function(c){
+    c.minY = c.final ? 26 : 18;
+    c.maxY = c.final ? 0  : -14;
+  });
+
+  /* cover-fit geometry, recomputed on resize */
+  var fit = { dw:0, dh:0, dx:0, dy:0 };
+  function resize(){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width  = Math.round(window.innerWidth  * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    var scale = Math.max(canvas.width / FW, canvas.height / FH);
+    fit.dw = FW * scale; fit.dh = FH * scale;
+    fit.dx = (canvas.width  - fit.dw) / 2;
+    fit.dy = (canvas.height - fit.dh) / 2;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function drawOne(i, alpha){
+    var sheet = Math.floor(i / PER_SHEET);
+    var img = images[sheet];
+    if (!img) return;
+    var pos = i % PER_SHEET;
+    var sx = (pos % COLS) * FW;
+    var sy = Math.floor(pos / COLS) * FH;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, sx, sy, FW, FH, fit.dx, fit.dy, fit.dw, fit.dh);
+    ctx.globalAlpha = 1;
+  }
+
+  /* frame blending: base frame solid, next frame faded in by the
+     fractional position — this is what hides the 8fps stepping */
+  function drawFrame(f){
+    if (f < 0) f = 0; if (f > FRAMES - 1) f = FRAMES - 1;
+    var base = Math.floor(f);
+    var frac = f - base;
+    drawOne(base, 1);
+    if (frac > 0.02 && base + 1 <= FRAMES - 1) drawOne(base + 1, frac);
+  }
+
+  function smoothstep(a, b, x){
+    if (x <= a) return 0;
+    if (x >= b) return 1;
+    var t = (x - a) / (b - a);
+    return t * t * (3 - 2 * t);
+  }
+
+  function chapterState(c, f){
+    var op = 1;
+    if (c.fadeIn[1] > c.fadeIn[0])  op = smoothstep(c.fadeIn[0], c.fadeIn[1], f);
+    if (f > c.holdUntil && c.fadeOut) op = 1 - smoothstep(c.fadeOut[0], c.fadeOut[1], f);
+    var span = c.final ? [c.fadeIn[0], c.fadeIn[1]] : [c.fadeIn[0], c.fadeOut ? c.fadeOut[1] : 239];
+    var t = Math.min(1, Math.max(0, (f - span[0]) / Math.max(1, span[1] - span[0])));
+    return { opacity: op, y: c.minY + (c.maxY - c.minY) * t };
+  }
+
+  var cur = 0;   // eased frame position (float)
+
+  function scrollProgress(){
+    var total = track.offsetHeight - window.innerHeight;
+    if (total <= 0) return 0;
+    var y = window.scrollY - track.offsetTop;
+    return Math.min(1, Math.max(0, y / total));
+  }
+
+  function tick(time){
+    if (lenis) lenis.raf(time);
+
+    var p = scrollProgress();
+    var target = p * (FRAMES - 1);
+    cur += (target - cur) * LERP;
+    if (Math.abs(target - cur) < 0.005) cur = target;
+
+    if (loaded === SHEETS) drawFrame(cur);
+
+    chapters.forEach(function(c){
+      var s = chapterState(c, cur);
+      c.el.style.opacity = s.opacity.toFixed(3);
+      c.el.style.transform = 'translateY(' + s.y.toFixed(1) + 'px)';
+      if (c.final) c.el.classList.toggle('live', s.opacity > 0.6);
+    });
+
+    bar.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+    hint.style.opacity = cur < 10 ? String(1 - cur / 10) : '0';
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  /* ================= reveal when every sheet is in ================= */
+  ready.then(function(){
+    drawFrame(0);
+    /* hold one beat so the first frame is on screen before the fade */
+    setTimeout(function(){ preloader.classList.add('done'); }, 250);
+    setTimeout(function(){ preloader.style.display = 'none'; }, 1200);
+  });
+})();
+</script>
+</body>
+</html>
